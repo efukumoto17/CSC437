@@ -22,6 +22,13 @@ Validator.Tags = {
    queryFailed: "queryFailed",
    forbiddenField: "forbiddenField"
 };
+Validator.Lengths = {
+   content: 5000,
+   title: 80,
+   firstName: 30,
+   lastName: 50,
+   email: 150,
+};
 
 // Check |test|.  If false, add an error with tag and possibly empty array
 // of qualifying parameters, e.g. name of missing field if tag is
@@ -56,6 +63,8 @@ Validator.prototype.check = function(test, tag, params, cb) {
 // Somewhat like |check|, but designed to allow several chained checks
 // in a row, finalized by a check call.
 Validator.prototype.chain = function(test, tag, params) {
+   if(!params)
+      params = null;
    if (!test) {
       this.errors.push({tag: tag, params: params});
    }
@@ -69,13 +78,36 @@ Validator.prototype.checkAdmin = function(cb) {
 
 // Validate that AU is the specified person or is an admin
 Validator.prototype.checkPrsOK = function(prsId, cb) {
+   console.log(this.session)
+   console.log(this.session.prsId === prsId)
+   console.log(this.session.prsId)
+   console.log(prsId)
    return this.check(this.session &&
-    (this.session.isAdmin() || this.session.id === prsId),
+    (this.session.isAdmin() || this.session.prsId == prsId),
     Validator.Tags.noPermission, null, cb);
 };
 
 // Check presence of truthy property in |obj| for all fields in fieldList
 Validator.prototype.hasFields = function(obj, fieldList, cb) {
+   var self = this;
+
+   fieldList.forEach(function(name) {
+      self.chain(obj.hasOwnProperty(name), Validator.Tags.missingField, [name]);
+   });
+
+   return this.check(true, null, null, cb);
+};
+
+Validator.prototype.CheckFieldLengths = function(body){
+   body.forEach(function(val){
+      if(Lengths.hasOwnProperty(val.key) && Lengths.key.length < body.val.length){
+         this.errors.push({tag:Tags.badValue, params: null})
+      }
+   });
+   return this.check(true, null,null, cb);
+};
+
+Validator.prototype.hasOnlyFields = function(obj, fieldList, cb) {
    var self = this;
 
    fieldList.forEach(function(name) {
