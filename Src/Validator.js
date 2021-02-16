@@ -20,7 +20,8 @@ Validator.Tags = {
    noOldPwd: "noOldPwd",            // Password change requires old password
    dupTitle: "dupTitle",            // Title duplicates an existing cnv title
    queryFailed: "queryFailed",
-   forbiddenField: "forbiddenField"
+   forbiddenField: "forbiddenField",
+   oldPwdMismatch: 'oldPwdMismatch'
 };
 Validator.Lengths = {
    content: 5000,
@@ -78,10 +79,6 @@ Validator.prototype.checkAdmin = function(cb) {
 
 // Validate that AU is the specified person or is an admin
 Validator.prototype.checkPrsOK = function(prsId, cb) {
-   console.log(this.session)
-   console.log(this.session.prsId === prsId)
-   console.log(this.session.prsId)
-   console.log(prsId)
    return this.check(this.session &&
     (this.session.isAdmin() || this.session.prsId == prsId),
     Validator.Tags.noPermission, null, cb);
@@ -98,13 +95,16 @@ Validator.prototype.hasFields = function(obj, fieldList, cb) {
    return this.check(true, null, null, cb);
 };
 
-Validator.prototype.CheckFieldLengths = function(body){
-   body.forEach(function(val){
-      if(Lengths.hasOwnProperty(val.key) && Lengths.key.length < body.val.length){
-         this.errors.push({tag:Tags.badValue, params: null})
+Validator.prototype.checkFieldLengths = function(body, cb){
+   console.log(body);
+   Lengths = Validator.Lengths
+   for(val in body){
+      if(Lengths.hasOwnProperty(val) && Lengths[val].length < val.length){
+         console.log(val)
+         this.errors.push({tag:Tags.badValue, params: [val] })
       }
-   });
-   return this.check(true, null,null, cb);
+   }
+   return this.chain(true, null,null);
 };
 
 Validator.prototype.hasOnlyFields = function(obj, fieldList, cb) {

@@ -166,7 +166,7 @@ router.post('/', function(req, res) {
           vld.chain(body.role === 0 || admin, Tags.forbiddenRole)
           .chain((body.password && body.password.length > 0) || admin, Tags.missingField, ["password"])
           .chain(body.termsAccepted || admin, Tags.noTerms, null)
-          .check(body.role >= 0, Tags.badValue, ["role"], cb)) {
+          .check(body.role > -1 && body.role < 2, Tags.badValue, ["role"], cb)) {
             cnn.chkQry('select * from Person where email = ?', body.email, cb);
          }
       },
@@ -189,27 +189,35 @@ router.post('/', function(req, res) {
 router.put('/:id', function(req, res) {
    var vld = req.validator;
    var ssn = req.session;
-   var okFields = ["firstName", "lastName", "password", "role"]
+   var okFields = ["firstName", "lastName", "password", "role"];
+   var body = req.body;
+   console.log(body.password)
+   console.log(body.password == null )
+
 
    async.waterfall([
    cb => {
-      if (vld.checkPrsOK(req.params.id, cb)
-       && vld.chain(!(role in body) || ssn.isAdmin(), Tags.badValue, ["role"])
+      if (vld.checkPrsOK(req.params.id, cb) && 
+       vld.chain(!('role' in body) || 
+        (ssn.isAdmin()&& (body.role > -1 && body.role < 2)), Tags.badValue, ["role"])
       //  .hasOnlyFields(body, okFields)
-       .chain((termsAccepted in body), Tags.forbiddenField)
-       .chain((whenRegistered in body), Tags.forbiddenField)
-       .chain(!(lastName in body), Tags.badValue)
+       .chain(!('termsAccepted' in body), Tags.forbiddenField)
+       .chain(!('whenRegistered' in body), Tags.forbiddenField)
+       .chain(!('lastName' in body) || body.lastName.length > 0, Tags.badValue, ["lastName"])
        .checkFieldLengths(body)
-       .chain(!(password in body) || req.body.oldPassword || ssn.isAdmin(), Tags.noOldPwd)
-       .check(!(password in body) || req.body.password, Tags.badValue, ["password"], cb))
+       .chain(!('password' in body) || body.oldPassword || ssn.isAdmin(), Tags.noOldPwd)
+       .check(!('password' in body) || (body.password !== null && body.password.length > 0), Tags.badValue, ["password"], cb))
        req.cnn.chkQry('select * from Person where id = ?', [req.params.id],
        cb);
    },
    (foundPrs, fields, cb) =>{ // add oldpasswordmismatch
+      console.log(foundPrs[0].password)
+      console.log(req.body.oldPassword)
       if(vld.check(foundPrs.length, Tags.notFound, null, cb) &&
-      vld.chain()
-      .check(vld.isAdmin() || !(password in body) || 
-      foundPrs[0].user.password === req.body.oldPassword, Tags.oldPwdMismatch, cb)){
+      vld.check(vld.session.isAdmin() || !('password' in body) || 
+       (body.oldPassword && body.password), Tags.noOldPwd, cb) &&
+      vld.check(vld.session.isAdmin() || !('password' in body) || 
+       foundPrs[0].password === req.body.oldPassword, Tags.oldPwdMismatch, null, cb)){
          delete body.oldPassword;
          req.cnn.chkQry('update Person set ? where id = ?', 
          [req.body, req.params.id], cb);
@@ -221,7 +229,7 @@ router.put('/:id', function(req, res) {
    }
    ],
    err => {
-      cnn.release();
+      req.cnn.release();
    })
 });
 
@@ -230,19 +238,15 @@ router.get('/:id', function(req, res) {
    var ssn = req.session;
    var body = req.body;
    var cnn = req.cnn;
-   console.log(req.params.id)
-   console.log(vld.session.prsId)
 
    async.waterfall([
    function(cb) {
-     if (vld.checkPrsOK(req.params.id, cb)/*  && */)
+     if (vld.checkPrsOK(req.params.id, cb))
         req.cnn.chkQry('select * from Person where id = ?', [req.params.id],
          cb);
    },
    function(prsArr, fields, cb) {
-      console.log("2nd")
       if (vld.check(prsArr.length, Tags.notFound, null, cb)) {
-         console.log(prsArr[0])
          delete prsArr[0].password;
          res.json(prsArr);
          cb();
