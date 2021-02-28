@@ -29,10 +29,25 @@ create table Message (
    cnvId int not null,
    prsId int not null,
    whenMade datetime not null,
+   numLikes int not null,
    content varchar(5000) not null,
    constraint FKMessage_cnvId foreign key (cnvId) references Conversation(id)
     on delete cascade,
    constraint FKMessage_prsId foreign key (prsId) references Person(id)
+    on delete cascade
+);
+
+create table Likes (
+	id int auto_increment primary key,
+    cnvId int not null,
+    prsId int not null,
+	msgId int not null,
+    whenMade datetime not null,
+    constraint FKLikes_cnvId  foreign key (cnvId) references Conversation(id)
+    on delete cascade,
+    constraint FKLikes_prsId foreign key (prsId) references Person(id)
+    on delete cascade,
+    constraint FKLikes_msgId foreign key (msgId) references Message(id)
     on delete cascade
 );
 

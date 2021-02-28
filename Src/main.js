@@ -42,12 +42,14 @@ app.use(router);
 // otherwise respond immediately with 401 and noLogin error tag.
 app.use(function(req, res, next) {
    console.log(req.path);
+   console.log(req.method)
    if (req.session || (req.method === 'POST' &&
-    (req.path === '/Prss' || req.path === '/Ssns'))) {
+    (req.path === '/Prss' || req.path === '/Ssns') )){
       req.validator = new Validator(req, res);
       next();
-   } else
+   } else{
       res.status(401).end();
+   }
 });
 
 // Add DB connection, as req.cnn, with smart chkQry method, to |req|
@@ -57,6 +59,7 @@ app.use(CnnPool.router);
 app.use('/Prss', require('./Account/Prss.js'));
 app.use('/Ssns', require('./Account/Ssns.js'));
 app.use('/Cnvs', require('./Conversation/Cnvs.js'));
+app.use('/Msgs', require('./Conversation/Msgs.js'));
 
 // Special debugging route for /DB DELETE.  Clears all table contents,
 //resets all auto_increment keys to start at 1, and reinserts one admin user.

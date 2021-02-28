@@ -8,7 +8,7 @@ var Validator = function(req, res) {
 
 // List of errors, and their corresponding resource string tags
 Validator.Tags = {
-   noLogin: "noLogin",              // No active session/login
+   // noLogin: "noLogin",              // No active session/login
    noPermission: "noPermission",    // Login lacks permission.
    missingField: "missingField",    // Field missing. Params[0] is field name
    badValue: "badValue",            // Bad field value.  Params[0] is field name
@@ -19,9 +19,10 @@ Validator.Tags = {
    forbiddenRole: "forbiddenRole",  // Cannot set to this role
    noOldPwd: "noOldPwd",            // Password change requires old password
    dupTitle: "dupTitle",            // Title duplicates an existing cnv title
-   queryFailed: "queryFailed",
+   // queryFailed: "queryFailed",
    forbiddenField: "forbiddenField",
-   oldPwdMismatch: 'oldPwdMismatch'
+   oldPwdMismatch: 'oldPwdMismatch',
+   dupLike: 'dupLike'
 };
 Validator.Lengths = {
    content: 5000,
@@ -29,7 +30,18 @@ Validator.Lengths = {
    firstName: 30,
    lastName: 50,
    email: 150,
+   password:50
 };
+Validator.Strings = [
+   "email",
+   "firstName",
+   "lastName",
+   "password",
+   "title",
+   "content",
+]
+
+
 
 // Check |test|.  If false, add an error with tag and possibly empty array
 // of qualifying parameters, e.g. name of missing field if tag is
@@ -51,6 +63,8 @@ Validator.prototype.check = function(test, tag, params, cb) {
       if (this.res) {
          if (this.errors[0].tag === Validator.Tags.noPermission)
             this.res.status(403).end();
+         else if(this.errors[0].tag === Validator.Tags.notFound)
+            this.res.status(404).end()
          else
             this.res.status(400).json(this.errors);
          this.res = null;   // Preclude repeated closings
@@ -96,22 +110,30 @@ Validator.prototype.hasFields = function(obj, fieldList, cb) {
 };
 
 Validator.prototype.checkFieldLengths = function(body, cb){
-   console.log(body);
    Lengths = Validator.Lengths
    for(val in body){
-      if(Lengths.hasOwnProperty(val) && Lengths[val].length < val.length){
-         console.log(val)
-         this.errors.push({tag:Tags.badValue, params: [val] })
+      if(Lengths.hasOwnProperty(val) && body[val] && Lengths[val] < body[val].length){
+         this.errors.push({tag:Validator.Tags.badValue, params: [val] })
       }
    }
-   return this.chain(true, null,null);
+   return this.chain(true, null,null, cb);
 };
+Validator.prototype.checkStrings = function(body, cb){
+   Strings = Validator.Strings;
+   for(val in body){
+      if(Strings.includes(val) && typeof val !== 'string'){
+         this.errors.push({tag:Validator.Tags.badValue, params: [val] })
+      }
+   }
+   return this.chain(true, null, null, cb);
+}
 
 Validator.prototype.hasOnlyFields = function(obj, fieldList, cb) {
    var self = this;
+   var hasFields = Object.keys(obj)
 
-   fieldList.forEach(function(name) {
-      self.chain(obj.hasOwnProperty(name), Validator.Tags.missingField, [name]);
+   hasFields.forEach(function(name) {
+      self.chain(fieldList.includes(name), Validator.Tags.forbiddenField, [name]);
    });
 
    return this.check(true, null, null, cb);

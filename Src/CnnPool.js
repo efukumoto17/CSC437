@@ -35,10 +35,12 @@ CnnPool.router = function(req, res, next) {
          console.log("Connection acquired");
          cnn.chkQry = function(qry, prms, cb) {
             // Run real qry, checking for error
-            this.query(qry, prms, function(err, res, fields) {
-               if (err)
+
+            this.query(qry, prms, function(err, _ , fields) {
+               if (err){
                   res.status(500).json('Failed query ' + qry);
-               cb(err, res, fields);
+               }
+               cb(err, _ , fields);
             });
          };
          req.cnn = cnn;
