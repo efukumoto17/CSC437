@@ -28,7 +28,6 @@ router.get('/', function(req, res) {
       function(err){
          cnn.release()
       });
-
 });
 
 router.post('/', function(req, res) {

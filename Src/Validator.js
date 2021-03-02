@@ -8,7 +8,6 @@ var Validator = function(req, res) {
 
 // List of errors, and their corresponding resource string tags
 Validator.Tags = {
-   // noLogin: "noLogin",              // No active session/login
    noPermission: "noPermission",    // Login lacks permission.
    missingField: "missingField",    // Field missing. Params[0] is field name
    badValue: "badValue",            // Bad field value.  Params[0] is field name
@@ -19,7 +18,6 @@ Validator.Tags = {
    forbiddenRole: "forbiddenRole",  // Cannot set to this role
    noOldPwd: "noOldPwd",            // Password change requires old password
    dupTitle: "dupTitle",            // Title duplicates an existing cnv title
-   // queryFailed: "queryFailed",
    forbiddenField: "forbiddenField",
    oldPwdMismatch: 'oldPwdMismatch',
    dupLike: 'dupLike'
