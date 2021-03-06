@@ -16,14 +16,18 @@ class CnnPool {
     static router(req, res, next) {
         console.log("Getting connection");
         CnnPool.singleton.getConnection(function (err, cnn) {
-            if (err)
+            console.log("get connection");
+            if (err) {
+                console.log("err");
                 res.status(500).json('Failed to get connection ' + err);
+            }
             else {
                 console.log("Connection acquired");
                 cnn.chkQry = function (qry, prms, cb) {
                     // Run real qry, checking for error
                     this.query(qry, prms, function (err, _, fields) {
                         if (err) {
+                            console.log(err);
                             res.status(500).json('Failed query ' + qry);
                         }
                         cb(err, _, fields);

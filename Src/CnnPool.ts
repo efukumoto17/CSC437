@@ -16,14 +16,17 @@ export class CnnPool{
     };
 
     getConnection(this: CnnPool, cb: (err: MysqlError, connection: PoolConnection) => void){
-        this.pool.getConnection(cb);
+         this.pool.getConnection(cb);
     };
 
     static router(req: Request, res: Response, next: Function) {
         console.log("Getting connection");
         CnnPool.singleton.getConnection(function(err, cnn) {
-           if (err)
+           console.log("get connection")
+           if (err){
+               console.log("err")
               res.status(500).json('Failed to get connection ' + err);
+           }
            else {
               console.log("Connection acquired");
               cnn.chkQry = function(qry, prms, cb) {
@@ -31,6 +34,7 @@ export class CnnPool{
      
                  this.query(qry, prms, function(err, _ , fields) {
                     if (err){
+                       console.log(err);
                        res.status(500).json('Failed query ' + qry);
                     }
                     cb(err, _ , fields);

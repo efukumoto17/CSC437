@@ -1,6 +1,4 @@
-drop database if exists efukumot;
-create database efukumot;
-use efukumot;
+
 
 create table Person (
    id int auto_increment primary key,

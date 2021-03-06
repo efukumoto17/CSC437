@@ -12,10 +12,12 @@ let app: express.Express = express();
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+var port = process.argv[2] === '-p' ? process.argv[3] : '3000';
+
 // Partially complete handler for CORS.
 app.use(function(req, res, next) {
     console.log("Handling " + req.path + '/' + req.method);
-    res.header("Access-Control-Allow-Origin", "http://localhost:3000");
+    res.header("Access-Control-Allow-Origin", "http://localhost:" + port);
     res.header("Access-Control-Allow-Credentials", "true");
     res.header("Access-Control-Allow-Headers", "Content-Type");
     next();
@@ -56,7 +58,7 @@ app.use(function(req, res, next) {
     console.log(req.path);
     console.log(req.method)
     if (req.session || (req.method === 'POST' &&
-     (req.path === '/Prss' || req.path === '/Ssns') )){
+     (req.path === '/Prss' || req.path === '/Ssns'))){
        req.validator = new Validator(req, res);
        next();
     } else{
@@ -76,46 +78,56 @@ app.use('/Msgs', require('./Conversation/Msgs.js'));
 // Special debugging route for /DB DELETE.  Clears all table contents,
 //resets all auto_increment keys to start at 1, and reinserts one admin user.
 app.delete('/DB', function(req, res) {
-    // Callbacks to clear tables
-    var cbs = ["Message", "Conversation", "Person"].map(
-       table => function(cb: Function) {
-          req.cnn.query("delete from " + table, cb);
-       }
-    );
- 
-    // Callbacks to reset increment bases
-    cbs = cbs.concat(["Conversation", "Message", "Person"].map(
-       table => cb => {
-          req.cnn.query("alter table " + table + " auto_increment = 1", cb);
-       })
-    );
- 
-    // Callback to reinsert admin user
-    cbs.push(cb => {
-       req.cnn.query('INSERT INTO Person (firstName, lastName, email,' +
-          ' password, whenRegistered, role) VALUES ' +
-          '("Joe", "Admin", "adm@11.com","password", NOW(), 1)', cb);
-    });
- 
-    // Callback to clear sessions, release connection and return result
-    cbs.push(cb => {
-       Session.getAllIds().forEach(id => {
-          Session.findById(id).logOut();
-          console.log("Clearing " + id);
-       });
-       cb();
-    });
- 
-    series(cbs, err => {
-       req.cnn.release();
-       if (err)
-          res.status(400).json(err);
-       else
-          res.status(200).end();
-    });
- });
+   var vld = req.validator;
 
- // Anchor handler for general 404 cases.
+   if(vld.checkAdmin(() => {
+      req.cnn.release()
+      res.status(401).end();
+   })){
+
+      
+      // Callbacks to clear tables
+      var cbs = ["Message", "Conversation", "Person"].map(
+         table => function(cb: Function) {
+            req.cnn.query("delete from " + table, cb);
+         }
+         );
+         
+         // Callbacks to reset increment bases
+         cbs = cbs.concat(["Conversation", "Message", "Person"].map(
+            table => cb => {
+               req.cnn.query("alter table " + table + " auto_increment = 1", cb);
+            })
+         );
+            
+      // Callback to reinsert admin user
+      cbs.push(cb => {
+         req.cnn.query('INSERT INTO Person (firstName, lastName, email,' +
+         ' password, whenRegistered, role) VALUES ' +
+         '("Joe", "Admin", "adm@11.com","password", NOW(), 1)', cb);
+      });
+      
+      // Callback to clear sessions, release connection and return result
+      cbs.push(cb => {
+         Session.getAllIds().forEach(id => {
+            Session.findById(id).logOut();
+            console.log("Clearing " + id);
+         });
+         Session.resetAll();
+         cb();
+      });
+      
+      series(cbs, err => {
+         req.cnn.release();
+         if (err)
+         res.status(400).json(err);
+         else
+         res.status(200).end();
+      });
+   }
+});
+         
+         // Anchor handler for general 404 cases.
 app.use(function(req: Request, res: Response) {
     res.status(404).end();
     req.cnn.release();
@@ -124,11 +136,12 @@ app.use(function(req: Request, res: Response) {
  // Handler of last resort.  Send a 500 response with stacktrace as the body.
  app.use(function(err: MysqlError, req: Request, res: Response, next: Function) {
     //4 params === a try catch on whole thing
+    console.log(err.stack);
     res.status(500).json(err.stack);
     req.cnn && req.cnn.release();
  });
  
- app.listen(3000, function() {
-    console.log('App Listening on port 3000');
+ app.listen(port, function() {
+    console.log('App Listening on port ' + port);
  });
  

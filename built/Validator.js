@@ -40,6 +40,9 @@ class Validator {
     }
     ;
     checkPrsOK(prsId, cb) {
+        console.log(prsId);
+        console.log(this.session.prsId);
+        console.log(this.session.prsId == prsId);
         return this.check(this.session &&
             (this.session.isAdmin() || this.session.prsId == prsId), Validator.Tags.noPermission, null, cb);
     }

@@ -25,7 +25,7 @@ exports.router.get('/:msgId', function (req, res) {
                 msg = msgs[0];
                 toSend.cnvId = msg.id;
                 toSend.prsId = msg.prsId;
-                toSend.whenMade = msg.whenMade;
+                toSend.whenMade = new Date(msg.whenMade).getTime();
                 toSend.email = msg.email;
                 toSend.content = msg.content;
                 cnn.chkQry('select * from Likes where msgId = ?', [msgId], cb);

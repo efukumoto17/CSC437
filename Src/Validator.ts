@@ -80,11 +80,14 @@ export class Validator{
          Validator.Tags.noPermission, null, cb);
     };
 
-    checkPrsOK(prsId:Number, cb:Function) {
-        return this.check(this.session &&
+   checkPrsOK(prsId:Number, cb:Function) {
+      console.log(prsId)
+      console.log(this.session.prsId)
+      console.log(this.session.prsId == prsId)
+      return this.check(this.session &&
          (this.session.isAdmin() || this.session.prsId == prsId),
-         Validator.Tags.noPermission, null, cb);
-    };
+      Validator.Tags.noPermission, null, cb);
+   };
 
     hasFields(this:Validator, obj:JSON, fieldList:String[], cb:Function) {
         var self = this;

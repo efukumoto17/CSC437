@@ -18,11 +18,14 @@ exports.router.get('/', function (req, res) {
         function (cb) {
             var query = 'select * from Conversation';
             if (prsId)
-                cnn.chkQry(query + ' where id = ?', [prsId], cb);
+                cnn.chkQry(query + ' where ownerId = ?', [prsId], cb);
             else
                 cnn.chkQry(query, null, cb);
         },
         function (cnvs, fields, cb) {
+            cnvs.forEach((cnvs) => {
+                cnvs.lastMessage = cnvs.lastMessage ? new Date(cnvs.lastMessage).getTime() : null;
+            });
             res.json(cnvs);
             cb(null);
         }
@@ -67,6 +70,7 @@ exports.router.get('/:cnvId', function (req, res) {
         },
         function (cnv, fields, cb) {
             if (vld.check(cnv.length > 0, Tags.notFound, null, cb)) {
+                cnv[0].lastMessage = cnv[0].lastMessage ? new Date(cnv[0].lastMessage).getTime() : null;
                 res.json(cnv[0]);
                 cb(null);
             }
@@ -129,17 +133,16 @@ exports.router.delete('/:cnvId', function (req, res) {
             cb(null);
         }
     ], function (err) {
-        // res.status(200).end();
         cnn.release();
     });
 });
 exports.router.get('/:cnvId/Msgs', function (req, res) {
-    var dateTime = req.query.dateTime;
+    var dateTime = new Date(parseInt(req.query.dateTime));
     var num = parseInt(req.query.num);
     var cnvId = req.params.cnvId;
     var vld = req.validator;
     var cnn = req.cnn;
-    var ret = [];
+    console.log(new Date(dateTime));
     if (isNaN(num))
         num = req.query.num;
     async_1.waterfall([
@@ -152,7 +155,7 @@ exports.router.get('/:cnvId/Msgs', function (req, res) {
                     cnn.chkQry('select m.id, prsId, numLikes, whenMade, email, content '
                         + 'from Conversation c join Message m on cnvId = c.id '
                         + 'join Person p on prsId = p.id where c.id = ? '
-                        + 'order by whenMade where whenMade < ?, id limit ?', [cnvId, num], cb);
+                        + 'where whenMade < ? order by whenMade , id limit ?', [cnvId, dateTime, num], cb);
                 else if (num)
                     cnn.chkQry('select m.id, prsId, numLikes, whenMade, email, content '
                         + 'from Conversation c join Message m on cnvId = c.id '
@@ -171,6 +174,9 @@ exports.router.get('/:cnvId/Msgs', function (req, res) {
             }
         },
         function (msgs, fields, cb) {
+            msgs.forEach((msg) => {
+                msg.whenMade = new Date(msg.whenMade).getTime();
+            });
             res.json(msgs);
             cb(null);
         }

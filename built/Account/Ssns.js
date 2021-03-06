@@ -19,6 +19,9 @@ exports.router.get('/', function (req, res) {
         });
         res.json(body);
     }
+    else {
+        res.status(403).end();
+    }
     req.cnn.release();
 });
 exports.router.post('/', function (req, res) {
@@ -60,6 +63,7 @@ exports.router.get('/:id', function (req, res) {
         res.end();
         req.cnn.release();
     };
+    console.log(Session_1.Session.getAllIds());
     if (vld.check(ssn !== undefined, Tags.notFound, null, cb) && vld.checkPrsOK(ssn.prsId, cb)) {
         res.json({ id: ssn.id, prsId: ssn.prsId, loginTime: ssn.loginTime });
         req.cnn.release();

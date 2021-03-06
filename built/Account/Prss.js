@@ -12,11 +12,14 @@ exports.router.get('/', function (req, res) {
     var cnn = req.cnn;
     var email = req.session.isAdmin() && req.query.email ||
         !req.session.isAdmin() && req.session.email;
+    console.log(req.session.isAdmin() && req.query.email);
+    console.log(!req.session.isAdmin() && req.session.email);
+    console.log(email);
     var handler = function (err, prsArr, fields) {
         res.json(prsArr);
         req.cnn.release();
     };
-    if (!req.session.isAdmin() && req.session.email !== req.query.email) {
+    if (!req.session.isAdmin() && req.query.email && req.session.email !== req.query.email) {
         res.status(200).json([]);
         cnn.destroy();
     }
@@ -33,20 +36,24 @@ exports.router.post('/', function (req, res) {
     if (admin && !body.password)
         body.password = "*"; // Blocking password
     body.whenRegistered = new Date(); /* .getTime(); */
+    console.log(body.termsAccepted === undefined);
+    console.log(body.termsAccepted);
     async_1.waterfall([
         function (cb) {
             if (vld.hasFields(body, ["email", "password", "lastName", "role"], cb) &&
                 vld.checkFieldLengths(body, cb).check(true, null, null, cb) &&
                 vld.checkStrings(body, cb)
                     .chain(body.email, Tags.missingField, ["email"])
+                    .chain(body.lastName, Tags.missingField, ["lastName"])
                     .check(body.role !== undefined &&
                     body.role !== null, Tags.missingField, ["role"], cb) &&
-                vld.chain(body.lastName, Tags.missingField, ["lastName"])
+                vld
                     .chain(body.password, Tags.missingField, ["password"])
-                    .chain(body.termsAccepted, Tags.missingField, ["termsAccepted"])
-                    .check(typeof body.role === 'number', Tags.badValue, ["role"], cb) &&
+                    .chain(body.lastName.length > 0, Tags.missingField, ["lastName"])
+                    .chain(admin || body.termsAccepted !== undefined, Tags.missingField, ["termsAccepted"])
+                    .check(typeof body.role === 'number', Tags.forbiddenRole, null, cb) &&
                 vld.chain((body.password && body.password.length > 0) || admin, Tags.missingField, ["password"])
-                    .chain(body.termsAccepted || admin, Tags.noTerms, null)
+                    .chain(admin || body.termsAccepted, Tags.noTerms, null)
                     .check(body.role > -1 && body.role < 2, Tags.badValue, ["role"], cb) &&
                 vld.check(body.role === 0 || admin, Tags.forbiddenRole, null, cb)) {
                 cnn.chkQry('select * from Person where email = ?', body.email, cb);
@@ -54,7 +61,7 @@ exports.router.post('/', function (req, res) {
         },
         function (existingPrss, fields, cb) {
             if (vld.check(!existingPrss.length, Tags.dupEmail, null, cb)) {
-                body.termsAccepted = body.termsAccepted && new Date() /* .getTime() */;
+                body.termsAccepted = new Date();
                 cnn.chkQry('insert into Person set ?', [body], cb);
             }
         },
@@ -76,15 +83,16 @@ exports.router.put('/:id', function (req, res) {
         (cb) => {
             if (vld.checkPrsOK(prsId, cb) &&
                 vld.checkStrings(body, cb) &&
-                vld.hasOnlyFields(body, okFields, cb) &&
+                // vld &&
                 vld.chain(!('role' in body) || body.role === 0 ||
                     (ssn.isAdmin() && (body.role > -1 && body.role < 2)), Tags.badValue, ["role"])
-                    .chain(!('termsAccepted' in body), Tags.forbiddenField, ["termsAccepted"])
-                    .chain(!('whenRegistered' in body), Tags.forbiddenField, ["whenRegistered"])
-                    .chain(!('lastName' in body) || body.lastName.length > 0, Tags.badValue, ["lastName"])
+                    // .chain(!('termsAccepted' in body), Tags.forbiddenField, ["termsAccepted"])
+                    // .chain(!('whenRegistered' in body), Tags.forbiddenField, ["whenRegistered"])
+                    .chain(!('lastName' in body) || !(body.lastName === null) && body.lastName.length > 0, Tags.badValue, ["lastName"])
                     .checkFieldLengths(body, cb)
                     .chain(!('password' in body) || body.oldPassword || ssn.isAdmin(), Tags.noOldPwd, null)
-                    .check(!('password' in body) || (body.password !== null && body.password.length > 0), Tags.badValue, ["password"], cb)) {
+                    .chain(!('password' in body) || (body.password !== null && body.password.length > 0), Tags.badValue, ["password"])
+                    .hasOnlyFields(body, okFields, cb)) {
                 req.cnn.chkQry('select * from Person where id = ?', [req.params.id], cb);
             }
         },
@@ -193,6 +201,9 @@ exports.router.get('/:prsId/Msgs', function (req, res) {
             }
         },
         function (msgs, fields, cb) {
+            msgs.forEach((msg) => {
+                msg.whenMade = new Date(msg.whenMade).getTime();
+            });
             res.json(msgs);
             cb(null);
         }

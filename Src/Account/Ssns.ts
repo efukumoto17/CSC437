@@ -26,6 +26,8 @@ router.get('/', function(req, res) {
           body.push({id: ssn.id, prsId: ssn.prsId, loginTime: ssn.loginTime});
        });
        res.json(body);
+    }else{
+       res.status(403).end()
     }
     req.cnn.release();
  });
@@ -51,36 +53,37 @@ router.get('/', function(req, res) {
  });
 
  router.delete('/:id', function(req, res) {
-    var vld = req.validator;
-    var ssnId = parseInt(req.params.id);
-    var cnn = req.cnn;
-    var cb = function(){
-       res.end();
-       // cnn.release();
-    }
-    var ssn = Session.findById(ssnId);
-    if(vld.check(ssn !== undefined, Tags.notFound, null, cb)){
+   var vld = req.validator;
+   var ssnId = parseInt(req.params.id);
+   var cnn = req.cnn;
+   var cb = function(){
+      res.end();
+      // cnn.release();
+   }
+   var ssn = Session.findById(ssnId);
+   if(vld.check(ssn !== undefined, Tags.notFound, null, cb)){
        
-       if(vld.checkPrsOK(ssn.prsId, cb))
-          ssn.logOut();
-       res.end();
-    }
-    req.cnn.release();
+      if(vld.checkPrsOK(ssn.prsId, cb))
+         ssn.logOut();
+      res.end();
+   }
+   req.cnn.release();
  });
 
- router.get('/:id', function(req, res) {
-    var vld = req.validator;
-    var ssn = Session.findById(parseInt(req.params.id));
-    var cb = function(){
-       res.end();
-       req.cnn.release();
-    }
- 
-    if (vld.check(ssn!== undefined, Tags.notFound, null, cb) && vld.checkPrsOK(ssn.prsId, cb)) {
-       res.json({id: ssn.id, prsId: ssn.prsId, loginTime: ssn.loginTime});
-       req.cnn.release();
-    }
- 
- });
+router.get('/:id', function(req, res) {
+   var vld = req.validator;
+   var ssn = Session.findById(parseInt(req.params.id));
+   var cb = function(){
+      res.end();
+      req.cnn.release();
+   }
+   console.log(Session.getAllIds());
+
+   if (vld.check(ssn!== undefined, Tags.notFound, null, cb) && vld.checkPrsOK(ssn.prsId, cb)) {
+      res.json({id: ssn.id, prsId: ssn.prsId, loginTime: ssn.loginTime});
+      req.cnn.release();
+   }
+
+});
 
  module.exports = router;

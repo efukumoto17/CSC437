@@ -35,11 +35,14 @@ router.get('/', function(req: Request, res: Response) {
           function(cb: queryCallback){
              var query = 'select * from Conversation'
              if(prsId)
-                cnn.chkQry(query + ' where id = ?', [prsId], cb);
+                cnn.chkQry(query + ' where ownerId = ?', [prsId], cb);
              else 
                 cnn.chkQry(query, null, cb);
           },
-          function(cnvs: {[key: string]: string}[], fields: FieldInfo[], cb: queryCallback){
+          function(cnvs: Conversation[], fields: FieldInfo[], cb: queryCallback){
+             cnvs.forEach((cnvs) =>{
+                cnvs.lastMessage = cnvs.lastMessage ? new Date(cnvs.lastMessage).getTime(): null;
+             });
              res.json(cnvs);
              cb(null);
           }
@@ -87,8 +90,9 @@ router.get('/', function(req: Request, res: Response) {
        function(cb: queryCallback){
           cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
        },
-       function(cnv: {[key: string]: string}[], fields: FieldInfo[], cb: queryCallback){
+       function(cnv: Conversation[], fields: FieldInfo[], cb: queryCallback){
           if(vld.check(cnv.length > 0, Tags.notFound, null, cb)){
+             cnv[0].lastMessage = cnv[0].lastMessage ? new Date(cnv[0].lastMessage).getTime() : null;
              res.json(cnv[0])
              cb(null);
           }
@@ -157,20 +161,20 @@ router.put('/:cnvId', function(req, res) {
        cb(null);
     }],
     function(err) {
-       // res.status(200).end();
        cnn.release();
     });
  });
 
  router.get('/:cnvId/Msgs', function(req, res){
-    var dateTime = req.query.dateTime;
-    var num: number | String = parseInt(<string>req.query.num);
-    var cnvId = req.params.cnvId;
-    var vld = req.validator;
-    var cnn = req.cnn;
-    var ret = [];
-    if(isNaN(num))
-       num = <string>req.query.num
+   var dateTime = new Date(parseInt(<string>req.query.dateTime));
+   var num: number | String = parseInt(<string>req.query.num);
+   var cnvId = req.params.cnvId;
+   var vld = req.validator;
+   var cnn = req.cnn;
+   console.log(new Date(dateTime))
+   if(isNaN(num))
+      num = <string>req.query.num
+
  
     waterfall([
        function(cb: queryCallback) {
@@ -182,8 +186,8 @@ router.put('/:cnvId', function(req, res) {
                 cnn.chkQry('select m.id, prsId, numLikes, whenMade, email, content '
                 + 'from Conversation c join Message m on cnvId = c.id '
                 + 'join Person p on prsId = p.id where c.id = ? '
-                +'order by whenMade where whenMade < ?, id limit ?', 
-                 [cnvId,num], cb)
+                +'where whenMade < ? order by whenMade , id limit ?', 
+                 [cnvId, dateTime, num], cb)
              else if(num)
                 cnn.chkQry('select m.id, prsId, numLikes, whenMade, email, content '
                 + 'from Conversation c join Message m on cnvId = c.id '
@@ -201,7 +205,10 @@ router.put('/:cnvId', function(req, res) {
                 +'order by whenMade, id', [cnvId], cb)
           }
        },
-       function(msgs: {[key: string]: string}[], fields: FieldInfo, cb: queryCallback) {
+       function(msgs: Message[], fields: FieldInfo, cb: queryCallback) {
+          msgs.forEach((msg) =>{
+            msg.whenMade = new Date(msg.whenMade).getTime(); 
+          });
           res.json(msgs);
           cb(null);
        }
